@@ -87,5 +87,8 @@
   "bugs": {
     "url": "https://github.com/gentleman8643/First-Bank-Trust/issues"
   },
-  "homepage": "https://github.com/gentleman8643/First-Bank-Trust#readme"
+  "homepage": "https://github.com/gentleman8643/First-Bank-Trust#readme",
+  "devDependencies": {
+    "code-inspector-plugin": "^2.0.9"
+  }
 }

@@ -1,9 +1,12 @@
-/** @type {import('next').NextConfig} */
+const { codeInspectorPlugin } = require('code-inspector-plugin');
+
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.plugins.push(codeInspectorPlugin({ bundler: 'webpack' }));
+    }
+    return config;
   },
-  images: { unoptimized: true },
 };
 
 module.exports = nextConfig;

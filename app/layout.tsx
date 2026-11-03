@@ -7,6 +7,10 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'First Bank & Trust | Digital Banking',
   description: 'A clearer view of your financial life.',
+  themeColor: '#00543d',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover',
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'First Bank & Trust' },
+  formatDetection: { telephone: false },
   openGraph: {
     images: [
       {
