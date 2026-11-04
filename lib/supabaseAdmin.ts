@@ -11,7 +11,15 @@ export function getAdminClient(): SupabaseClient {
   if (!url || !serviceKey) {
     throw new Error('Supabase server env vars are missing (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).');
   }
-  cached = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  cached = createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      // Next.js caches server-side fetches by default (and Vercel keeps that cache between
+      // requests). That made admin lists, username lookups and code checks return STALE data.
+      // Banking data must always be read live, so never use the cache.
+      fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }),
+    },
+  });
   return cached;
 }
 
