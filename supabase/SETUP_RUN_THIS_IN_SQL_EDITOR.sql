@@ -99,8 +99,9 @@ ALTER TABLE public.contact_requests ENABLE ROW LEVEL SECURITY;
 -- profiles
 DROP POLICY IF EXISTS "customers_read_own_profile" ON public.profiles;
 CREATE POLICY "customers_read_own_profile" ON public.profiles FOR SELECT TO authenticated USING (auth.uid() = id);
+-- NOTE: customers get NO update policy on profiles (it would let them change their own role).
+-- After running this file, also run UPDATE_2_RUN_THIS_IN_SQL_EDITOR.sql (access-code gate).
 DROP POLICY IF EXISTS "customers_update_own_profile" ON public.profiles;
-CREATE POLICY "customers_update_own_profile" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
 -- accounts (customers read their own; writes happen via server/service role)
 DROP POLICY IF EXISTS "customers_read_own_accounts" ON public.accounts;

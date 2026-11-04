@@ -580,13 +580,19 @@ export default function Home() {
       if (!active) return;
       const session = data.session;
       if (!session) { setSessionChecked(true); return; }
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      const { data: profile } = await supabase.from('profiles').select('role, last_access_code_at').eq('id', session.user.id).single();
       if (!active) return;
       if (profile?.role === 'admin') {
         setView('admin');
       } else {
-        setView('dashboard');
-        loadCustomerData();
+        // Customers only resume if a banker-issued code was accepted in the last 24 hours.
+        const lastCode = profile?.last_access_code_at ? new Date(profile.last_access_code_at).getTime() : 0;
+        if (Date.now() - lastCode < 24 * 60 * 60 * 1000) {
+          setView('dashboard');
+          loadCustomerData();
+        } else {
+          await supabase.auth.signOut();
+        }
       }
       setSessionChecked(true);
     };

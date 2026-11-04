@@ -32,7 +32,12 @@ export async function POST(request: Request) {
     const digest = await hashCode(String(code));
     if (digest !== row.code_digest) return NextResponse.json({ error: 'Incorrect access code.' }, { status: 403 });
 
-    await admin.from('member_access_codes').update({ used_at: new Date().toISOString() }).eq('user_id', userData.user.id);
+    const now = new Date().toISOString();
+    await admin.from('member_access_codes').update({ used_at: now }).eq('user_id', userData.user.id);
+    // Record when this customer last proved they hold a banker-issued code.
+    // The database only exposes their data for 24 hours after this moment.
+    const { error: stampError } = await admin.from('profiles').update({ last_access_code_at: now }).eq('id', userData.user.id);
+    if (stampError) return NextResponse.json({ error: stampError.message }, { status: 500 });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
