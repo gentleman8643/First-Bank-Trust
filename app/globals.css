@@ -204,3 +204,7 @@ button { cursor: pointer; }
   .product-copy h3 { font-size:24px; }
   .metric-card { padding:16px; }
 }
+
+/* Shown for a split second while we check whether someone is already signed in,
+   so signed-in customers never see a flash of the public home page on reload. */
+.boot-splash { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; background:var(--cream); }

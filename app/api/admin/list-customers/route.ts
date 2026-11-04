@@ -11,12 +11,12 @@ export async function GET(request: Request) {
   const admin = getAdminClient();
   const { data: profiles, error } = await admin
     .from('profiles')
-    .select('id, display_name, email, username, role, status')
+    .select('id, display_name, email, username, role, status, country')
     .eq('role', 'customer')
     .order('created_at', { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const { data: accounts } = await admin.from('accounts').select('id, user_id, name, type, masked_number, balance, available_balance');
+  const { data: accounts } = await admin.from('accounts').select('id, user_id, name, type, masked_number, balance, available_balance, currency, details');
   const { data: codes } = await admin.from('member_access_codes').select('user_id, expires_at, used_at');
 
   const now = Date.now();

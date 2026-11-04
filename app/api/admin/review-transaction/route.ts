@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabaseAdmin';
 import { requireAdmin } from '@/lib/requireAdmin';
+import { notify } from '@/lib/notify';
+import { formatMoney } from '@/lib/countries';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +24,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    const { data: before } = await admin.from('transactions').select('user_id, merchant, amount, currency, category, status, source').eq('id', transactionId).maybeSingle();
+
     const patch: Record<string, unknown> = {};
     if (status !== undefined) {
       if (!['pending', 'complete', 'cancelled'].includes(status)) return NextResponse.json({ error: 'invalid status' }, { status: 400 });
@@ -33,6 +37,17 @@ export async function POST(request: Request) {
 
     const { error } = await admin.from('transactions').update(patch).eq('id', transactionId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Tell the customer when their own request changes status.
+    if (before && before.source === 'customer' && status && status !== before.status && (status === 'complete' || status === 'cancelled')) {
+      const amountText = formatMoney(Math.abs(Number(before.amount)), before.currency ?? 'USD');
+      await notify(admin, before.user_id, {
+        title: `${before.category} ${status === 'complete' ? 'completed' : 'cancelled'}`,
+        body: `${before.merchant} · ${amountText}${note ? ` — ${note}` : ''}`,
+        kind: 'transaction',
+        link: 'transactions',
+      });
+    }
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });

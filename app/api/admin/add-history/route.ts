@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabaseAdmin';
 import { requireAdmin } from '@/lib/requireAdmin';
+import { currencyFor } from '@/lib/countries';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,9 @@ export async function POST(request: Request) {
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
     const admin = getAdminClient();
+    // History is recorded in the currency of the customer's country.
+    const { data: owner } = await admin.from('profiles').select('country').eq('id', userId).maybeSingle();
+    const currency = currencyFor(owner?.country);
     const toRow = (e: any) => {
       const amt = Math.abs(Number(e.amount));
       const isIn = e.direction === 'in' || e.direction === 'credit';
@@ -31,6 +35,7 @@ export async function POST(request: Request) {
         admin_description: e.note || null,
         source: body.source === 'seed' ? 'seed' : 'staff',
         is_hidden: false,
+        currency,
         transaction_date: e.date ? new Date(e.date).toISOString() : new Date().toISOString(),
       };
     };
