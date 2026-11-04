@@ -1,14 +1,20 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'] });
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+  themeColor: '#00543d',
+};
+
 export const metadata: Metadata = {
   title: 'First Bank & Trust | Digital Banking',
   description: 'A clearer view of your financial life.',
-  themeColor: '#00543d',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'First Bank & Trust' },
   formatDetection: { telephone: false },
   openGraph: {
