@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 // Show, hide or rebuild the pre-built (seeded) statement history for ONE customer.
 // Body: { userId, visible: boolean, regenerate?: boolean }
-//  - visible=true : un-hides existing seeded rows; if there are none yet, builds a fresh ~2-year history.
+//  - visible=true : un-hides existing seeded rows; if there are none yet, builds a fresh ~5-year history.
 //  - visible=false: hides all seeded rows (the customer no longer sees them).
 //  - regenerate=true: throws away the seeded rows and builds a brand new, different history.
 export async function POST(request: Request) {
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
     const { data: owner } = await admin.from('profiles').select('country').eq('id', userId).maybeSingle();
     const currency = currencyFor(owner?.country);
-    const rows = generateHistory({ currency, months: 24 }).map((entry) => ({
+    const rows = generateHistory({ currency, months: 60 }).map((entry) => ({
       user_id: userId,
       merchant: entry.merchant.toUpperCase(),
       amount: entry.direction === 'in' ? entry.amount : -entry.amount,

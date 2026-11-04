@@ -33,9 +33,27 @@ function mulberry32(seed: number) {
   };
 }
 
+// Big, bank-to-bank style movements the customer wants to see on the statement.
+// These use the RAW amount band (not currency-scaled) so every currency shows the
+// same headline figures the admin asked for: 500,000 up to 30,000,000.
+const BIG_FUND_MIN = 500_000;
+const BIG_FUND_MAX = 30_000_000;
+const BIG_IN_SOURCES = [
+  'Incoming wire · Meridian Capital Partners', 'Incoming wire · Harborstone Holdings', 'Incoming wire · Oakwood Trust Account',
+  'Incoming wire · Sterling Global Ventures', 'Settlement · Property sale proceeds', 'Incoming wire · Evergreen Asset Management',
+  'Incoming wire · Summit Private Equity', 'Investment maturity · Fixed deposit', 'Incoming wire · Redwood Industries Ltd',
+  'Incoming wire · Blue Horizon Fund', 'Inheritance distribution · Estate trust', 'Incoming wire · Copperfield Corporation',
+];
+const BIG_OUT_SOURCES = [
+  'Outgoing wire · Property acquisition', 'Outgoing wire · Meridian Capital Partners', 'Outgoing wire · Fixed deposit placement',
+  'Outgoing wire · Summit Private Equity', 'Outgoing wire · Harborstone Holdings', 'Business acquisition · Escrow transfer',
+  'Outgoing wire · Evergreen Asset Management', 'Outgoing wire · Sterling Global Ventures', 'Loan repayment · Corporate facility',
+  'Outgoing wire · Redwood Industries Ltd', 'Outgoing wire · Oakwood Trust Account', 'Investment placement · Managed portfolio',
+];
+
 export function generateHistory(options: { currency: string; months?: number; seed?: number; now?: Date }): HistoryEntry[] {
   const now = options.now ?? new Date();
-  const months = options.months ?? 24;
+  const months = options.months ?? 60; // five years of history by default
   const rnd = mulberry32(options.seed ?? Math.floor(Math.random() * 2147483647));
   const scale = CURRENCY_SCALE[options.currency] ?? 1;
 
@@ -45,6 +63,13 @@ export function generateHistory(options: { currency: string; months?: number; se
   const money = (usd: number) => {
     const value = usd * scale;
     return options.currency === 'JPY' ? Math.max(1, Math.round(value)) : Math.max(0.01, Math.round(value * 100) / 100);
+  };
+  // A large, round-ish figure in the requested 500,000 – 30,000,000 band.
+  // Uses the raw band for every currency so the headline numbers match the brief.
+  const bigFund = () => {
+    const raw = between(BIG_FUND_MIN, BIG_FUND_MAX);
+    const rounded = Math.round(raw / 1000) * 1000; // tidy to the nearest thousand
+    return Math.min(BIG_FUND_MAX, Math.max(BIG_FUND_MIN, rounded));
   };
   const person = () => `${pick(FIRST)} ${pick(LAST)}`;
 
@@ -152,6 +177,19 @@ export function generateHistory(options: { currency: string; months?: number; se
           break;
         }
         default: break;
+      }
+    }
+
+    // Big fund movements: occasional large wires in and out, both directions,
+    // in the 500,000 – 30,000,000 band (raw, not currency-scaled). Roughly a
+    // couple a month on average, so a five-year statement is plenty full.
+    if (chance(0.085)) {
+      const bigIn = chance(0.5);
+      const amount = bigFund();
+      if (bigIn) {
+        add(current, { merchant: fresh(() => pick(BIG_IN_SOURCES)).toUpperCase(), amount, direction: 'in', category: 'Wire transfer', note: 'Incoming funds' }, 10 + Math.floor(rnd() * 6));
+      } else {
+        add(current, { merchant: fresh(() => pick(BIG_OUT_SOURCES)).toUpperCase(), amount, direction: 'out', category: 'Wire transfer', note: 'Outgoing funds' }, 10 + Math.floor(rnd() * 6));
       }
     }
   }

@@ -5,7 +5,7 @@ import { requireAdmin } from '@/lib/requireAdmin';
 export const dynamic = 'force-dynamic';
 
 const PAGE = 1000;
-const MAX_ROWS = 10000;
+const MAX_ROWS = 50000;
 
 // GET ?userId=...  -> every transaction for that customer (including hidden ones)
 // GET ?pending=1   -> all pending customer transfers awaiting approval, with customer names
