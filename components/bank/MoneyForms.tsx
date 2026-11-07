@@ -3,7 +3,7 @@
 import { FormEvent, ReactNode, useState } from 'react';
 import { ArrowDownToLine, ArrowRight, Check, Landmark, Plus, ShieldCheck, WalletCards } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { apiPost } from '@/lib/api';
+import { apiPost, apiPostForm } from '@/lib/api';
 import { COUNTRIES, formatMoney, getCountry, validatePaymentFields } from '@/lib/countries';
 import type { Account, UserProfile } from '@/lib/types';
 
@@ -55,6 +55,34 @@ function AmountField({ value, onChange, currency }: { value: string; onChange: (
         <input className="field-input pr-16" value={value} onChange={(event) => onChange(event.target.value.replace(/[^0-9.]/g, ''))} inputMode="decimal" placeholder="0.00" />
         <span className="absolute right-4 top-3.5 text-xs font-bold text-slate-400">{currency}</span>
       </div>
+    </div>
+  );
+}
+
+function CheckPhoto({ label, side, file, onPick }: { label: string; side: 'front' | 'back'; file: File | null; onPick: (file: File | null) => void }) {
+  const preview = file ? URL.createObjectURL(file) : null;
+  return (
+    <div>
+      <label className="field-label">{label} *</label>
+      <label className="flex min-h-[132px] cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-stone-300 bg-white p-3 text-center text-xs text-slate-500 hover:border-[var(--forest)]">
+        {preview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={preview} alt={`${label} preview`} className="max-h-28 w-auto rounded-md object-contain" />
+        ) : (
+          <>
+            <ArrowDownToLine size={20} className="text-[var(--forest)]" />
+            <span>Tap to take a photo or upload</span>
+          </>
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          capture={side === 'front' ? 'environment' : undefined}
+          className="hidden"
+          onChange={(event) => onPick(event.target.files?.[0] ?? null)}
+        />
+      </label>
+      {file && <button type="button" className="mt-1.5 text-xs font-semibold text-forest underline" onClick={() => onPick(null)}>Replace</button>}
     </div>
   );
 }
@@ -304,37 +332,59 @@ export function Deposit({ accounts, profile, onComplete }: { accounts: Account[]
   const [message, setMessage] = useState('');
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Mobile check deposit: optional front/back photos of the cheque.
+  const [mobileCheck, setMobileCheck] = useState(false);
+  const [front, setFront] = useState<File | null>(null);
+  const [back, setBack] = useState<File | null>(null);
 
   const to = accounts[Math.min(accountIndex, accounts.length - 1)];
   if (!to) return <NoAccounts />;
   const method = country.depositMethods[Math.min(methodIndex, country.depositMethods.length - 1)];
 
-  const reset = () => { setDone(false); setAmount(''); setReference(''); setMessage(''); };
+  const reset = () => { setDone(false); setAmount(''); setReference(''); setMessage(''); setMobileCheck(false); setFront(null); setBack(null); };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const parsed = Number(amount);
     if (!parsed || parsed <= 0) { setMessage('Enter the amount you deposited or sent.'); return; }
+    if (mobileCheck && (!front || !back)) { setMessage('Add a photo of both the front and the back of the cheque.'); return; }
     if (!supabase) { setMessage('Online banking is temporarily unavailable. Please try again later.'); return; }
     setMessage('');
     setBusy(true);
-    const { error } = await supabase.from('transactions').insert({
-      account_id: to.id,
-      merchant: `DEPOSIT · ${method.title}`.toUpperCase(),
-      amount: parsed,
-      direction: 'credit',
-      status: 'pending',
-      category: 'Deposit',
-      payment_details: { method: method.title, reference: reference.trim() },
-      note: reference.trim() ? `Reference: ${reference.trim()}` : null,
-      currency: to.currency,
-      source: 'customer',
-      transaction_date: new Date().toISOString(),
-    });
-    setBusy(false);
-    if (error) { setMessage(SERVER_RULE_MESSAGE); return; }
-    setDone(true);
-    onComplete();
+    try {
+      let checkImages: { frontPath: string; backPath: string } | null = null;
+      if (mobileCheck && front && back) {
+        const body = new FormData();
+        body.append('front', front);
+        body.append('back', back);
+        checkImages = await apiPostForm<{ frontPath: string; backPath: string }>('/api/deposit/upload', body);
+      }
+      const label = mobileCheck ? 'Mobile check deposit' : method.title;
+      const { error } = await supabase.from('transactions').insert({
+        account_id: to.id,
+        merchant: `DEPOSIT · ${label}`.toUpperCase(),
+        amount: parsed,
+        direction: 'credit',
+        status: 'pending',
+        category: 'Deposit',
+        payment_details: {
+          method: label,
+          reference: reference.trim(),
+          ...(checkImages ? { checkFront: checkImages.frontPath, checkBack: checkImages.backPath } : {}),
+        },
+        note: reference.trim() ? `Reference: ${reference.trim()}` : null,
+        currency: to.currency,
+        source: 'customer',
+        transaction_date: new Date().toISOString(),
+      });
+      if (error) { setMessage(SERVER_RULE_MESSAGE); return; }
+      setDone(true);
+      onComplete();
+    } catch (err) {
+      setMessage((err as Error).message || 'We could not upload the cheque images. Please try again.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (done) {
@@ -384,6 +434,19 @@ export function Deposit({ accounts, profile, onComplete }: { accounts: Account[]
             </div>
             <AmountField value={amount} onChange={setAmount} currency={to.currency} />
             <TextField label="Reference (optional)" value={reference} onChange={setReference} placeholder="Transfer or receipt reference" />
+            <div className="rounded-2xl border border-stone-200 bg-cream/50 p-4">
+              <label className="flex items-center gap-3 text-sm font-medium text-forest">
+                <input type="checkbox" className="h-4 w-4 accent-[var(--forest)]" checked={mobileCheck} onChange={(event) => { setMobileCheck(event.target.checked); setMessage(''); }} />
+                Deposit a cheque with photos
+              </label>
+              {mobileCheck && (
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <CheckPhoto label="Front of cheque" side="front" file={front} onPick={setFront} />
+                  <CheckPhoto label="Back of cheque" side="back" file={back} onPick={setBack} />
+                  <p className="sm:col-span-2 text-xs leading-5 text-slate-500">On a phone you can take the photo directly; on a computer you can upload a scan or picture. Endorse the back before photographing it.</p>
+                </div>
+              )}
+            </div>
           </div>
           {message && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{message}</p>}
           <button className="primary-button mt-6 w-full" type="submit" disabled={busy}>{busy ? 'Sending…' : <>Report deposit <ArrowRight size={17} /></>}</button>

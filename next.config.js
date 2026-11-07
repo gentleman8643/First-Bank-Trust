@@ -1,11 +1,10 @@
-const { codeInspectorPlugin } = require('code-inspector-plugin');
-
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack: (config, { dev }) => {
-    if (dev) {
-      config.plugins.push(codeInspectorPlugin({ bundler: 'webpack' }));
-    }
-    return config;
+  reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'images.pexels.com' },
+    ],
   },
 };
 

@@ -51,7 +51,7 @@ const BIG_OUT_SOURCES = [
   'Outgoing wire · Redwood Industries Ltd', 'Outgoing wire · Oakwood Trust Account', 'Investment placement · Managed portfolio',
 ];
 
-export function generateHistory(options: { currency: string; months?: number; seed?: number; now?: Date }): HistoryEntry[] {
+export function generateHistory(options: { currency: string; months?: number; seed?: number; now?: Date; from?: Date }): HistoryEntry[] {
   const now = options.now ?? new Date();
   const months = options.months ?? 60; // five years of history by default
   const rnd = mulberry32(options.seed ?? Math.floor(Math.random() * 2147483647));
@@ -129,7 +129,12 @@ export function generateHistory(options: { currency: string; months?: number; se
   ].map((bill) => ({ ...bill, fixedAmount: money(bill.base) }));
   const subs = [...SUBSCRIPTIONS].sort(() => rnd() - 0.5).slice(0, 3).map((name) => ({ name, price: money(between(4.99, 19.99)), day: 1 + Math.floor(rnd() * 27) }));
 
-  const start = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+  // Append mode: when a start date is given, build only from the day AFTER it up to
+  // today, so we extend an existing statement without overlapping what is already there.
+  const monthsBack = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+  const start = options.from
+    ? new Date(options.from.getFullYear(), options.from.getMonth(), options.from.getDate() + 1)
+    : monthsBack;
   let payFriday = 0;
 
   for (let day = new Date(start); day <= now; day.setDate(day.getDate() + 1)) {

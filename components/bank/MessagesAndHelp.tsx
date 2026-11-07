@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, Mail, MapPin, MessageSquare, Phone, Send } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { apiPost } from '@/lib/api';
 import { getCountry } from '@/lib/countries';
 import type { UserProfile } from '@/lib/types';
 
@@ -68,6 +69,8 @@ export function Messages({ profile, onRead }: { profile: UserProfile; onRead: ()
       setError('We could not send that. If you signed in more than 24 hours ago, please sign in again with a new code.');
       return;
     }
+    // Instant acknowledgement from the bank (server-posted; best effort).
+    try { await apiPost('/api/messages/ack', {}); } catch { /* non-fatal */ }
     await load();
   };
 

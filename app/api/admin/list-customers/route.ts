@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const admin = getAdminClient();
   const { data: profiles, error } = await admin
     .from('profiles')
-    .select('id, display_name, email, username, role, status, country')
+    .select('id, display_name, email, username, role, status, country, disabled, code_free_until')
     .eq('role', 'customer')
     .order('created_at', { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

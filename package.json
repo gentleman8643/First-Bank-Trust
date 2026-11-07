@@ -71,11 +71,7 @@
     "vaul": "^0.9.9",
     "zod": "^3.23.8"
   },
-  "description": "",
-  "main": "admin-panel.js",
-  "directories": {
-    "lib": "lib"
-  },
+  "description": "First Bank & Trust digital banking demo (Next.js 14 + Supabase).",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gentleman8643/First-Bank-Trust.git"
@@ -83,12 +79,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/gentleman8643/First-Bank-Trust/issues"
   },
-  "homepage": "https://github.com/gentleman8643/First-Bank-Trust#readme",
-  "devDependencies": {
-    "code-inspector-plugin": "^2.0.9"
-  }
+  "homepage": "https://github.com/gentleman8643/First-Bank-Trust#readme"
 }

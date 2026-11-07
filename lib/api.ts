@@ -23,3 +23,13 @@ export async function apiGet<T = any>(path: string): Promise<T> {
   if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
   return json as T;
 }
+
+// Multipart POST (file uploads). Do NOT set Content-Type; the browser adds the
+// correct multipart boundary automatically. Still sends the session token.
+export async function apiPostForm<T = any>(path: string, body: FormData): Promise<T> {
+  const headers = { ...(await authHeader()) };
+  const res = await fetch(path, { method: 'POST', headers, body });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
+  return json as T;
+}
